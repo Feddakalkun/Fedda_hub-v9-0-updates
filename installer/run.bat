@@ -1,80 +1,61 @@
 @echo off
-cd /d "%~dp0"
-title Fanvue Hub Universe Launcher
+setlocal EnableDelayedExpansion
+title Fedda Hub - Universal Launcher
 
 :: ============================================================================
 :: RE-ENTRANT SECTIONS (For separate windows)
 :: ============================================================================
 if "%1"==":launch_ollama" goto :launch_ollama
 if "%1"==":launch_comfy" goto :launch_comfy
-if "%1"==":launch_vox" goto :launch_vox
+if "%1"==":launch_fedda_hub" goto :launch_fedda_hub
 if "%1"==":launch_browser" goto :launch_browser
 
 :: ============================================================================
-:: MAIN LAUNCHER
+:: MAIN CONFIGURATION
 :: ============================================================================
+cd /d "%~dp0"
+set "INSTALLER_DIR=%~dp0"
+:: Base Directory is the Repository Root (one level up from installer)
+cd ..
+set "REPO_ROOT=%CD%"
+set "PYTHON=%REPO_ROOT%\python_embeded\python.exe"
+set "OLLAMA_EXE=%REPO_ROOT%\ollama_embeded\ollama.exe"
+set "NODE_EXE=%REPO_ROOT%\node_embeded\node.exe"
+set "NPM_CMD=%REPO_ROOT%\node_embeded\npm.cmd"
+set "GIT_CMD=%REPO_ROOT%\git_embeded\cmd\git.exe"
+
+:: Set PATH for session
+set "PATH=%REPO_ROOT%\python_embeded;%REPO_ROOT%\python_embeded\Scripts;%REPO_ROOT%\git_embeded\cmd;%REPO_ROOT%\node_embeded;%PATH%"
 
 echo ============================================================================
-echo   LAUNCHING MULTIVERSE SYSTEM
+echo   FEDDA HUB LAUNCHER (Portable)
 echo ============================================================================
 echo.
+echo  Root Directory: %REPO_ROOT%
+echo  Python: %PYTHON%
+echo  Node:   %NODE_EXE%
+echo.
 
-:: 1. SETUP ENVIRONMENT
-set "BASE_DIR=%~dp0"
-if "%BASE_DIR:~-1%"=="\" set "BASE_DIR=%BASE_DIR:~0,-1%"
-
-set "PYTHON=%BASE_DIR%\python_embeded\python.exe"
-set "OLLAMA=%BASE_DIR%\ollama_embeded\ollama.exe"
-set "PATH=%BASE_DIR%\python_embeded;%BASE_DIR%\python_embeded\Scripts;%BASE_DIR%\git\cmd;%BASE_DIR%\node_embeded;%PATH%"
-
-:: 2. Start Ollama
-echo [1/5] Starting Ollama LLM Engine...
-start "Ollama LLM Engine" /MIN cmd /k "call "%~f0" :launch_ollama"
+:: 1. Start Ollama
+echo [1/3] Starting Ollama LLM Engine...
+start "Ollama Engine" /MIN cmd /k "call "%~f0" :launch_ollama"
 timeout /t 2 /nobreak >nul
 
-:: 3. Start ComfyUI
-echo [2/5] Starting ComfyUI (Port 8188)...
-start "ComfyUI Launcher" /MIN cmd /k "call "%~f0" :launch_comfy"
+:: 2. Start ComfyUI
+echo [2/3] Starting ComfyUI (Port 8188)...
+start "ComfyUI Backend" /MIN cmd /k "call "%~f0" :launch_comfy"
+
+:: 3. Start Fedda Hub (Next.js)
+echo [3/3] Starting Fedda Hub Dashboard (Port 3000)...
+start "Fedda Hub Dashboard" /MIN cmd /k "call "%~f0" :launch_fedda_hub"
 
 :: 4. Start Browser Waiter
-echo [INFO] Browser will open automatically when ComfyUI is ready.
-start "ComfyUI Browser Waiter" /MIN cmd /c "call "%~f0" :launch_browser"
-
-:: 5. Start VoxCPM
-echo [3/5] Starting VoxCPM (Port 7860)...
-start "VoxCPM Engine" /MIN cmd /k "call "%~f0" :launch_vox"
-
-:: 6. Start HTTPS Proxy
-echo [4/5] Starting HTTPS Proxy...
-if exist "fedda-hub\start-https.bat" (
-    start "Fedda Hub HTTPS Proxy" /MIN cmd /k "cd fedda-hub & call start-https.bat"
-)
-
-:: 7. Start Fedda Hub
-echo [5/5] Starting Fedda Hub Dashboard (Port 3000)...
-
-echo Clearing port 3000...
-for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":3000"') do taskkill /F /PID %%a 2>nul
-timeout /t 1 >nul
-
-cd fedda-hub
-if not exist .env.local (
-    echo # Fedda Hub Config > .env.local
-)
-
-if not exist node_modules (
-    echo [INFO] First run detected. Installing Fedda Hub dependencies...
-    call npm install --legacy-peer-deps
-    echo [INFO] Initializing Database...
-    call npx prisma generate
-    call npx prisma db push
-)
+echo [INFO] Browser will open automatically when UI is ready.
+start "Browser Helper" /MIN cmd /c "call "%~f0" :launch_browser"
 
 echo.
 echo System launching... 
 echo Press any key to clean exit launcher (background services will keep running).
-call npm run dev
-
 pause
 exit /b
 
@@ -82,17 +63,19 @@ exit /b
 :: SUBROUTINE: OLLAMA
 :: ============================================================================
 :launch_ollama
-set "BASE_DIR=%~dp0"
-if "%BASE_DIR:~-1%"=="\" set "BASE_DIR=%BASE_DIR:~0,-1%"
-set "OLLAMA=%BASE_DIR%\ollama_embeded\ollama.exe"
-set "OLLAMA_MODELS=%BASE_DIR%\ollama_embeded\models"
-set "OLLAMA_HOST=127.0.0.1:11435"
+cd /d "%~dp0"
+cd ..
+set "REPO_ROOT=%CD%"
+set "OLLAMA_EXE=%REPO_ROOT%\ollama_embeded\ollama.exe"
+set "OLLAMA_MODELS=%REPO_ROOT%\ollama_embeded\models"
+set "OLLAMA_HOST=127.0.0.1:11434"
 
-if exist "%OLLAMA%" (
+if exist "%OLLAMA_EXE%" (
     echo Running Portable Ollama...
-    "%OLLAMA%" serve
+    "%OLLAMA_EXE%" serve
 ) else (
-    echo Portable Ollama not found. Trying system Ollama...
+    echo [WARNING] Portable Ollama not found at: %OLLAMA_EXE%
+    echo Trying system Ollama...
     ollama serve
 )
 if %errorlevel% neq 0 (
@@ -105,15 +88,15 @@ exit /b
 :: SUBROUTINE: COMFYUI
 :: ============================================================================
 :launch_comfy
-set "BASE_DIR=%~dp0"
-if "%BASE_DIR:~-1%"=="\" set "BASE_DIR=%BASE_DIR:~0,-1%"
-set "COMFYUI_DIR=%BASE_DIR%\ComfyUI"
-if not exist "%COMFYUI_DIR%" set "COMFYUI_DIR=ComfyUI"
-set "PYTHON=%BASE_DIR%\python_embeded\python.exe"
-set "PATH=%BASE_DIR%\python_embeded;%BASE_DIR%\python_embeded\Scripts;%BASE_DIR%\git\cmd;%BASE_DIR%\node_embeded;%PATH%"
+cd /d "%~dp0"
+cd ..
+set "REPO_ROOT=%CD%"
+set "COMFYUI_DIR=%REPO_ROOT%\ComfyUI"
+set "PYTHON=%REPO_ROOT%\python_embeded\python.exe"
+:: Add portable GIT and Python to PATH for this session
+set "PATH=%REPO_ROOT%\python_embeded;%REPO_ROOT%\python_embeded\Scripts;%REPO_ROOT%\git_embeded\cmd;%REPO_ROOT%\node_embeded;%PATH%"
 
 set COMFYUI_OFFLINE=1
-set TORIO_USE_FFMPEG=0
 set PYTHONUNBUFFERED=1
 set PYTHONIOENCODING=utf-8
 set PYTHONPATH=%COMFYUI_DIR%;%PYTHONPATH%
@@ -123,38 +106,55 @@ for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":8188"') do taskkill 
 timeout /t 1 >nul
 
 cd /d "%COMFYUI_DIR%"
-"%PYTHON%" -u main.py --windows-standalone-build --port 8188 --listen 127.0.0.1 --reserve-vram 4 --disable-auto-launch
+if not exist "main.py" (
+    echo [ERROR] ComfyUI main.py not found in %COMFYUI_DIR%
+    pause
+    exit /b
+)
+
+"%PYTHON%" -u main.py --windows-standalone-build --port 8188 --listen 127.0.0.1 --reserve-vram 2 --disable-auto-launch
 
 if %errorlevel% neq 0 (
-    echo.
     echo [ERROR] ComfyUI crashed with error code %errorlevel%
     pause
 )
 exit /b
 
 :: ============================================================================
-:: SUBROUTINE: VOXCPM
+:: SUBROUTINE: FEDDA HUB (NEXT.JS)
 :: ============================================================================
-:launch_vox
-set "BASE_DIR=%~dp0"
-if "%BASE_DIR:~-1%"=="\" set "BASE_DIR=%BASE_DIR:~0,-1%"
-set "VOX_DIR=%BASE_DIR%\VoxCPM"
-set "PYTHON=%BASE_DIR%\python_embeded\python.exe"
-set "PATH=%BASE_DIR%\python_embeded;%BASE_DIR%\python_embeded\Scripts;%BASE_DIR%\git\cmd;%BASE_DIR%\node_embeded;%PATH%"
+:launch_fedda_hub
+cd /d "%~dp0"
+cd ..
+set "REPO_ROOT=%CD%"
+set "NODE_EXE=%REPO_ROOT%\node_embeded\node.exe"
+set "NPM_CMD=%REPO_ROOT%\node_embeded\npm.cmd"
+:: Add portable Node/Git to path
+set "PATH=%REPO_ROOT%\node_embeded;%REPO_ROOT%\git_embeded\cmd;%PATH%"
 
-if not exist "%VOX_DIR%" (
-    echo [ERROR] VoxCPM directory missing: %VOX_DIR%
-    pause
-    exit /b
+echo Clearing port 3000...
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":3000"') do taskkill /F /PID %%a 2>nul
+timeout /t 1 >nul
+
+:: Next.js app is in Root
+if not exist ".env.local" (
+    echo # Fedda Hub Config > .env.local
 )
 
-cd /d "%VOX_DIR%"
-echo [INFO] Launching VoxCPM (GPU Enabled)...
-"%PYTHON%" app.py
+:: First time setup check (check if node_modules exists in root)
+if not exist "node_modules" (
+    echo [INFO] First run detected. Installing dependencies...
+    call "%NPM_CMD%" install --legacy-peer-deps
+    echo [INFO] Initializing Database...
+    call "%NPM_CMD%" run prisma:generate
+    call "%NPM_CMD%" run prisma:push
+)
+
+echo Starting Next.js...
+call "%NPM_CMD%" run dev
 
 if %errorlevel% neq 0 (
-    echo.
-    echo [ERROR] VoxCPM crashed with error code %errorlevel%
+    echo [ERROR] Fedda Hub crashed!
     pause
 )
 exit /b
@@ -163,11 +163,8 @@ exit /b
 :: SUBROUTINE: BROWSER WAITER
 :: ============================================================================
 :launch_browser
-set "BASE_DIR=%~dp0"
-if "%BASE_DIR:~-1%"=="\" set "BASE_DIR=%BASE_DIR:~0,-1%"
-
 echo Waiting for Fedda Hub (localhost:3000)...
-timeout /t 5 >nul
-echo Fedda Hub should be starting! Launching browser...
+timeout /t 8 >nul
+echo Launching...
 start "" http://localhost:3000
 exit /b
