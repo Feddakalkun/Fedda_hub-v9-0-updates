@@ -1,0 +1,93 @@
+# ============================================================================
+# Fedda Hub - Portable Installation Package
+# .gitignore - Only commit source files, not installed components or binaries
+# ============================================================================
+
+# INSTALLED COMPONENTS (DO NOT COMMIT)
+# ----------------------------------------------------------------------------
+ComfyUI/
+VoxCPM/
+ollama_embeded/
+logs/
+
+# EMBEDDED BINARIES (TOO LARGE FOR GIT)
+# ----------------------------------------------------------------------------
+# Python embedded - exclude entirely except structure markers
+python_embeded/
+!python_embeded/.gitkeep
+
+# Git embedded - exclude entirely  
+git_embeded/
+!git_embeded/.gitkeep
+
+# Node.js embedded - exclude entirely
+node_embeded/
+!node_embeded/.gitkeep
+
+# Fedda Hub - Node modules and build artifacts
+fedda-hub/node_modules/
+fedda-hub/.next/
+fedda-hub/out/
+fedda-hub/dist/
+
+# Database files
+fedda-hub/prisma/*.db
+fedda-hub/prisma/*.db-journal
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environment files (may contain secrets)
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Downloaded archives
+*.zip
+get-pip.py
+
+# Test and build artifacts
+build/
+dist/
+*.egg-info/
+
+# ============================================================================
+# WHAT GETS COMMITTED (Source files only):
+# ----------------------------------------------------------------------------
+# ✓ scripts/              (PowerShell installer scripts)
+# ✓ config/               (nodes.json, etc.)
+# ✓ assets/               (styles.csv, voice samples)
+# ✓ fedda-hub/src/        (TypeScript/React source)
+# ✓ fedda-hub/prisma/     (Schema only)
+# ✓ fedda-hub/public/     (Static assets)
+# ✓ *.bat                 (Batch scripts: install, run, update)
+# ✓ *.md                  (Documentation)
+# ✓ .gitignore            (This file)
+#
+# ✗ python_embeded/       (Download at install time)
+# ✗ git_embeded/          (Download at install time)
+# ✗ node_embeded/         (Download at install time)
+# ✗ ComfyUI/              (Clone at install time)
+# ============================================================================
+

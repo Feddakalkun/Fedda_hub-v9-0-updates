@@ -10,7 +10,8 @@ import {
     MessageSquare,
     Sparkles,
     Camera,
-    Heart
+    Heart,
+    Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -31,6 +32,7 @@ export function Sidebar({ className, activeTab }: SidebarProps) {
     const pathname = usePathname();
 
     const creativeMenu: MenuItem[] = [
+        { icon: Users, label: "Characters", href: "/studio/characters" },
         { icon: Palette, label: "Image Lab", href: "/studio/image" },
         { icon: Video, label: "Video Lab", href: "/studio/video" },
         { icon: Mic, label: "Audio Lab", href: "/studio/audio" },

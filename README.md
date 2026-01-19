@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fedda Hub - AI Content Studio
 
-## Getting Started
+**Modern web application for AI content generation with Next.js + ComfyUI**
 
-First, run the development server:
+---
 
+## 🚀 Quick Start
+
+### Installation
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Clone repository
+git clone https://github.com/Feddakalkun/Fedda_hub-v9-0.git
+cd Fedda_hub-v9-0
+
+# 2. Run installer (Windows only)
+install.bat
+
+# 3. Wait 20-40 minutes for installation
+
+# 4. Start all services
+run.bat
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Services will be available at:**
+- 🎨 Fedda Hub Dashboard: http://localhost:3000
+- 🖼️ ComfyUI Engine: http://localhost:8188
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📁 Repository Structure
 
-## Learn More
+```
+Fedda_hub-v9-0/
+├── fedda-hub/              # Next.js web application
+│   ├── src/                # Source code
+│   ├── prisma/             # Database schema
+│   └── package.json
+│
+├── installer/              # Portable installation package
+│   ├── scripts/            # Installation scripts
+│   ├── config/             # Configuration files
+│   ├── assets/             # Workflows & styles
+│   └── *.bat               # Installer entry points
+│
+├── docs/                   # Documentation
+│
+├── install.bat             # Main installer (calls installer/install.bat)
+├── run.bat                 # Start all services
+└── update.bat              # Update components
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 💻 Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Web App Development
+```bash
+cd fedda-hub
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+### Installer Development
+See `installer/README.md` for details on the portable installation system.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📚 Documentation
+
+- **Installation Guide:** `docs/INSTALLATION.md`
+- **Development Guide:** `docs/DEVELOPMENT.md`
+- **VM Testing:** `docs/VM_TESTING.md`
+
+---
+
+## 🔧 System Requirements
+
+**Minimum:**
+- Windows 10/11 (64-bit)
+- 16 GB RAM
+- 20 GB free disk space
+
+**Recommended:**
+- NVIDIA GPU (RTX 3060+ with 8GB+ VRAM)
+- 32 GB RAM
+- 50 GB+ free disk space
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our contributing guidelines.
+
+---
+
+## 📄 License
+
+[Add license information]
+
+---
+
+## 🔗 Links
+
+- GitHub: https://github.com/Feddakalkun/Fedda_hub-v9-0
+- Documentation: [Add docs link]
+- Support: [Add support link]
