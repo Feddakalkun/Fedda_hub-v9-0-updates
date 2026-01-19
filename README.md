@@ -6,24 +6,47 @@
 
 ## 🚀 Quick Start
 
-### Installation
+### For End Users (Install Everything)
+
+```bash
+# 1. Download and extract the repository
+# 2. Navigate to installer folder
+cd installer
+
+# 3. Run the installer
+install.bat
+
+# 4. Wait 20-40 minutes
+
+# 5. Start services
+run.bat
+```
+
+**Services will start on:**
+- 🎨 Fedda Hub: http://localhost:3000
+- 🖼️ ComfyUI: http://localhost:8188
+
+---
+
+### For Developers (Web App Only)
+
 ```bash
 # 1. Clone repository
 git clone https://github.com/Feddakalkun/Fedda_hub-v9-0.git
 cd Fedda_hub-v9-0
 
-# 2. Run installer (Windows only)
-install.bat
+# 2. Install dependencies
+npm install
 
-# 3. Wait 20-40 minutes for installation
+# 3. Setup database
+npx prisma generate
+npx prisma db push
 
-# 4. Start all services
-run.bat
+# 4. Run dev server
+npm run dev
 ```
 
-**Services will be available at:**
-- 🎨 Fedda Hub Dashboard: http://localhost:3000
-- 🖼️ ComfyUI Engine: http://localhost:8188
+Open http://localhost:3000
 
 ---
 
@@ -31,22 +54,29 @@ run.bat
 
 ```
 Fedda_hub-v9-0/
-├── fedda-hub/              # Next.js web application
-│   ├── src/                # Source code
-│   ├── prisma/             # Database schema
-│   └── package.json
+├── src/                    # Next.js application source
+│   ├── app/                # App router pages & API routes
+│   ├── components/         # React components
+│   └── lib/                # Utilities & helpers
 │
-├── installer/              # Portable installation package
-│   ├── scripts/            # Installation scripts
-│   ├── config/             # Configuration files
+├── prisma/                 # Database schema & migrations
+│
+├── public/                 # Static assets
+│
+├── installer/              # Portable Windows installer
+│   ├── scripts/
+│   │   ├── core/           # Installation scripts
+│   │   ├── testing/        # GPU detection & tests
+│   │   └── helpers/        # Python utilities
+│   ├── config/             # ComfyUI node configuration
 │   ├── assets/             # Workflows & styles
-│   └── *.bat               # Installer entry points
+│   ├── install.bat         # Main installer
+│   ├── run.bat             # Start all services
+│   └── update.bat          # Update components
 │
-├── docs/                   # Documentation
-│
-├── install.bat             # Main installer (calls installer/install.bat)
-├── run.bat                 # Start all services
-└── update.bat              # Update components
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
 ---
@@ -55,26 +85,23 @@ Fedda_hub-v9-0/
 
 ### Web App Development
 ```bash
-cd fedda-hub
-npm install
-npm run dev
+npm run dev          # Start dev server
+npm run build        # Build for production
+npm run lint         # Run linter
 ```
 
-### Installer Development
-See `installer/README.md` for details on the portable installation system.
-
----
-
-## 📚 Documentation
-
-- **Installation Guide:** `docs/INSTALLATION.md`
-- **Development Guide:** `docs/DEVELOPMENT.md`
-- **VM Testing:** `docs/VM_TESTING.md`
+### Database
+```bash
+npx prisma studio    # Open database GUI
+npx prisma generate  # Generate Prisma client
+npx prisma db push   # Push schema changes
+```
 
 ---
 
 ## 🔧 System Requirements
 
+### For End Users (Full Installation)
 **Minimum:**
 - Windows 10/11 (64-bit)
 - 16 GB RAM
@@ -85,11 +112,30 @@ See `installer/README.md` for details on the portable installation system.
 - 32 GB RAM
 - 50 GB+ free disk space
 
+### For Developers (Web App Only)
+- Node.js 20+
+- Any OS (Windows/Mac/Linux)
+
+---
+
+## 📚 Documentation
+
+The portable installer includes:
+- GPU auto-detection (NVIDIA/AMD/CPU)
+- Automatic dependency installation
+- Pre-configured ComfyUI with custom nodes
+- Voice synthesis (VoxCPM)
+- Local AI chat (Ollama)
+
+See `installer/README.md` for details.
+
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our contributing guidelines.
+Contributions welcome! This is a monorepo containing:
+- Web application (root)
+- Portable installer (`installer/`)
 
 ---
 
@@ -101,6 +147,5 @@ Contributions are welcome! Please read our contributing guidelines.
 
 ## 🔗 Links
 
-- GitHub: https://github.com/Feddakalkun/Fedda_hub-v9-0
-- Documentation: [Add docs link]
-- Support: [Add support link]
+- **GitHub:** https://github.com/Feddakalkun/Fedda_hub-v9-0
+- **Issues:** https://github.com/Feddakalkun/Fedda_hub-v9-0/issues
