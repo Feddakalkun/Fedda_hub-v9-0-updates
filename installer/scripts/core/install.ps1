@@ -277,22 +277,34 @@ function Run-Git {
 
 function Install-FanvueHub {
     Write-Log "`n[Fedda Hub] Installing dependencies..."
-    $HubDir = Join-Path $RootPath "fedda-hub"
     
-    if (-not (Test-Path $HubDir)) {
-        Write-Log "ERROR: fedda-hub directory missing!"
+    # In new structure, Next.js app is in root (package.json, src/, prisma/ at root level)
+    # Check if we have package.json in root
+    $PackageJson = Join-Path $RootPath "package.json"
+    
+    if (-not (Test-Path $PackageJson)) {
+        Write-Log "ERROR: package.json not found in root!"
+        Write-Log "Fedda Hub requires Next.js app files (package.json, src/, prisma/) in repository root"
         return
     }
 
-    Set-Location $HubDir
-    # Use portable node
+    Set-Location $RootPath
+    
+    # Use portable node to install dependencies
+    Write-Log "[Fedda Hub] Running npm install..."
     & "$NodeExe" "npm" "install" "--legacy-peer-deps"
     
-    Write-Log "[Fedda Hub] Initializing Database..."
-    & "$NodeExe" "npx" "prisma" "generate"
-    & "$NodeExe" "npx" "prisma" "db" "push"
+    # Check if prisma folder exists
+    $PrismaDir = Join-Path $RootPath "prisma"
+    if (Test-Path $PrismaDir) {
+        Write-Log "[Fedda Hub] Initializing Database..."
+        & "$NodeExe" "npx" "prisma" "generate"
+        & "$NodeExe" "npx" "prisma" "db" "push"
+    }
+    else {
+        Write-Log "[Fedda Hub] No prisma folder found, skipping database setup"
+    }
     
-    Set-Location $RootPath
     Write-Log "[Fedda Hub] Setup complete."
     Pause-Step
 }
