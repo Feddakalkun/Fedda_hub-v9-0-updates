@@ -44,7 +44,23 @@ Each phase contains multiple tracked steps with status indicators:
 
 ---
 
-### 3. **Enhanced Error Handling**
+
+### 3. **Robust Process Execution**
+
+- **Issue**: Standard `Start-Process` in PowerShell caused crashes when using simple redirection (`RedirectStandardOutput` == `RedirectStandardError`) or due to event handler threading issues.
+- **Solution**: Implemented a robust process wrapper that:
+  - Uses separate logical files for `stdout` and `stderr` to prevent file locking conflicts.
+  - reliably waits for process completion.
+  - Merges output logs automatically for clean reporting.
+  - Prevents hard crashes by handling exceptions at the process launch level.
+
+### 4. **Graceful Degradation**
+
+- **Critical Components**: Failures in PyTorch stop the installation (Critical=True).
+- **Optional Components**: Failures in `xformers` or `SageAttention` are logged as Warnings but do NOT stop the installation. Installer falls back to standard PyTorch attention automatically.
+
+### 5. **Enhanced Error Handling**
+
 
 #### Before:
 ```powershell
@@ -70,7 +86,7 @@ Run-Pip "install torch==2.5.1 --index-url ..." "PyTorch 2.5.1 + CUDA 12.4" $true
 
 ---
 
-### 4. **GPU Detection with Detailed Logging**
+### 6. **GPU Detection with Detailed Logging**
 
 The installer now logs every GPU detection step:
 
@@ -85,7 +101,7 @@ Saves GPU mode to install state for summary report.
 
 ---
 
-### 5. **Installation Summary Report**
+### 7. **Installation Summary Report**
 
 At the end of every installation, a comprehensive summary is generated:
 
@@ -125,7 +141,7 @@ STATUS: COMPLETED WITH ERRORS ⚠
 
 ---
 
-### 6. **Smart Package Installation**
+### 8. **Smart Package Installation**
 
 Enhanced PyTorch/Xformers/SageAttention installation:
 
@@ -147,7 +163,7 @@ if ($xformersResult -ne 0) {
 
 ---
 
-### 7. **User Documentation**
+### 9. **User Documentation**
 
 Created comprehensive guides:
 
