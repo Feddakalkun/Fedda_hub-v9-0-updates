@@ -844,7 +844,8 @@ $Deps = @(
     "webdriver-manager", "beautifulsoup4", "lxml", "shapely",
     "deepdiff", "fal_client", "matplotlib", "scipy", "scikit-image", "scikit-learn",
     "timm", "colour-science", "blend-modes", "loguru",
-    "gguf", "segment-anything", "webcolors", "google-generativeai", "py-cpuinfo"
+    "gguf", "segment-anything", "webcolors", "google-generativeai", "py-cpuinfo",
+    "ftfy", "wget"
 )
 Run-Pip "install $($Deps -join ' ')"
 
