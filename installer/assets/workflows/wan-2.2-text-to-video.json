@@ -185,7 +185,7 @@
   },
   "205": {
     "inputs": {
-      "model_name": "RealESRGAN_x2.pth"
+      "model_name": "RealESRGAN_x2plus.pth"
     },
     "class_type": "UpscaleModelLoader",
     "_meta": {
@@ -329,7 +329,7 @@
   },
   "230": {
     "inputs": {
-      "unet_name": "Wan2.2-T2V-A14B-HighNoise-Q8_0.gguf"
+      "unet_name": "wan2.2_t2v_high_noise_14B_Q4_K_M.gguf"
     },
     "class_type": "UnetLoaderGGUF",
     "_meta": {
@@ -338,7 +338,7 @@
   },
   "231": {
     "inputs": {
-      "unet_name": "Wan2.2-T2V-A14B-LowNoise-Q8_0.gguf"
+      "unet_name": "wan2.2_t2v_low_noise_14B_Q4_K_M.gguf"
     },
     "class_type": "UnetLoaderGGUF",
     "_meta": {
@@ -575,7 +575,7 @@
   },
   "290": {
     "inputs": {
-      "download_links": "https://huggingface.co/bullerwins/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2_t2v_high_noise_14B_Q5_K_M.gguf?download=true unet\nhttps://huggingface.co/bullerwins/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2_t2v_low_noise_14B_Q5_K_M.gguf?download=true unet\nhttps://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x2.pth?download=true upscale_models\nhttps://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors?download=true vae\nhttps://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors?download=true text_encoders\n\n",
+      "download_links": "https://huggingface.co/bullerwins/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2_t2v_high_noise_14B_Q4_K_M.gguf?download=true unet\nhttps://huggingface.co/bullerwins/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2_t2v_low_noise_14B_Q4_K_M.gguf?download=true unet\nhttps://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x2.pth?download=true upscale_models\nhttps://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors?download=true vae\nhttps://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors?download=true text_encoders\n\n",
       "auto_download": true,
       "max_concurrent_downloads": 3,
       "max_download_speed_mbps": 0,
