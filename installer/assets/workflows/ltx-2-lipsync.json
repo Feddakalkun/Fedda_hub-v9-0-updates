@@ -447,13 +447,6 @@
       "title": "Preview Audio"
     }
   },
-  "294": {
-    "inputs": {},
-    "class_type": "FancyTimerNode",
-    "_meta": {
-      "title": "Execution Timer"
-    }
-  },
   "295": {
     "inputs": {
       "unet_name": "ltx-2-19b-dev-fp8.safetensors",
