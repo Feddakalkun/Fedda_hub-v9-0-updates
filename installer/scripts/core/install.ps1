@@ -395,52 +395,29 @@ function Run-Pip {
         Write-Step $StepName "STARTED"
     }
     
-    $PipLogFile = Join-Path $LogsDir "pip_$(Get-Date -Format 'HHmmss').log"
+    $Timestamp = Get-Date -Format 'HHmmss_fff'
+    $PipLogFile = Join-Path $LogsDir "pip_$Timestamp.log"
     Write-Log "Running: pip $Arguments" "INFO"
     
-    $ProcessInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $ProcessInfo.FileName = $PyExe
-    $ProcessInfo.Arguments = "-m pip $Arguments"
-    $ProcessInfo.UseShellExecute = $false
-    $ProcessInfo.RedirectStandardOutput = $true
-    $ProcessInfo.RedirectStandardError = $true
-    $ProcessInfo.CreateNoWindow = $true
+    try {
+        $Process = Start-Process -FilePath $PyExe -ArgumentList "-m pip $Arguments" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $PipLogFile -RedirectStandardError $PipLogFile
+        $ExitCode = $Process.ExitCode
+    }
+    catch {
+        Write-Log "Failed to execute pip subprocess: $_" "ERROR"
+        if ($Critical) { throw }
+        return 1
+    }
     
-    $Process = New-Object System.Diagnostics.Process
-    $Process.StartInfo = $ProcessInfo
-    
-    $stdout = New-Object System.Text.StringBuilder
-    $stderr = New-Object System.Text.StringBuilder
-    
-    $Process.add_OutputDataReceived({
-            if ($EventArgs.Data) {
-                $stdout.AppendLine($EventArgs.Data) | Out-Null
-                Write-Host $EventArgs.Data -ForegroundColor Gray
-            }
-        })
-    
-    $Process.add_ErrorDataReceived({
-            if ($EventArgs.Data) {
-                $stderr.AppendLine($EventArgs.Data) | Out-Null
-                Write-Host $EventArgs.Data -ForegroundColor DarkYellow
-            }
-        })
-    
-    $Process.Start() | Out-Null
-    $Process.BeginOutputReadLine()
-    $Process.BeginErrorReadLine()
-    $Process.WaitForExit()
-    
-    $ExitCode = $Process.ExitCode
-    
-    # Save pip output to log
-    $FullOutput = "STDOUT:`n$($stdout.ToString())`n`nSTDERR:`n$($stderr.ToString())"
-    Set-Content -Path $PipLogFile -Value $FullOutput
+    # Output content to console for visibility
+    if (Test-Path $PipLogFile) {
+        Get-Content $PipLogFile | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
+    }
     
     if ($ExitCode -ne 0) {
-        $ErrorMsg = "Pip command failed (Exit Code: $ExitCode): $Arguments"
-        Write-Log $ErrorMsg "ERROR"
-        Write-Log "Full output saved to: $PipLogFile" "ERROR"
+        $ErrorMsg = "Pip command failed (Exit Code: $ExitCode)"
+        Write-Log $ErrorMsg "WARNING" 
+        Write-Log "Full output saved to: $PipLogFile" "INFO"
         
         if ($StepName) {
             Write-Step $StepName "FAILED"
@@ -470,44 +447,31 @@ function Run-Git {
         Write-Step $StepName "STARTED"
     }
     
+    $Timestamp = Get-Date -Format 'HHmmss_fff'
+    $GitLogFile = Join-Path $LogsDir "git_$Timestamp.log"
     Write-Log "Running: git $Arguments" "INFO"
     
-    $ProcessInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $ProcessInfo.FileName = $GitExe
-    $ProcessInfo.Arguments = $Arguments
-    $ProcessInfo.UseShellExecute = $false
-    $ProcessInfo.RedirectStandardOutput = $true
-    $ProcessInfo.RedirectStandardError = $true
-    $ProcessInfo.CreateNoWindow = $true
+    try {
+        $Process = Start-Process -FilePath $GitExe -ArgumentList "$Arguments" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $GitLogFile -RedirectStandardError $GitLogFile
+        $ExitCode = $Process.ExitCode
+    }
+    catch {
+        Write-Log "Failed to execute git subprocess: $_" "ERROR"
+        return 1
+    }
     
-    $Process = New-Object System.Diagnostics.Process
-    $Process.StartInfo = $ProcessInfo
-    
-    $stdout = New-Object System.Text.StringBuilder
-    $stderr = New-Object System.Text.StringBuilder
-    
-    $Process.add_OutputDataReceived({
-            if ($EventArgs.Data) {
-                $stdout.AppendLine($EventArgs.Data) | Out-Null
-                Write-Host $EventArgs.Data -ForegroundColor Gray
-            }
-        })
-    
-    $Process.add_ErrorDataReceived({
-            if ($EventArgs.Data) {
-                $stderr.AppendLine($EventArgs.Data) | Out-Null
-            }
-        })
-    
-    $Process.Start() | Out-Null
-    $Process.BeginOutputReadLine()
-    $Process.BeginErrorReadLine()
-    $Process.WaitForExit()
-    
-    $ExitCode = $Process.ExitCode
+    # Output content to console
+    if (Test-Path $GitLogFile) {
+        Get-Content $GitLogFile | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
+        # Cleanup log for git unless failed
+        if ($ExitCode -eq 0) { Remove-Item $GitLogFile -Force -ErrorAction SilentlyContinue }
+    }
     
     if ($ExitCode -ne 0) {
         Write-Log "Git command failed (Exit Code: $ExitCode): $Arguments" "WARNING"
+        if (Test-Path $GitLogFile) {
+            Write-Log "Git output saved to: $GitLogFile" "INFO"
+        }
         if ($StepName) {
             Write-Step $StepName "FAILED"
         }
