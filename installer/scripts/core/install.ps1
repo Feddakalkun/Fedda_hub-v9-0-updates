@@ -843,7 +843,8 @@ $Deps = @(
     "librosa", "soundfile",
     "webdriver-manager", "beautifulsoup4", "lxml", "shapely",
     "deepdiff", "fal_client", "matplotlib", "scipy", "scikit-image", "scikit-learn",
-    "timm", "colour-science", "blend-modes", "loguru"
+    "timm", "colour-science", "blend-modes", "loguru",
+    "gguf", "segment-anything", "webcolors", "google-generativeai", "py-cpuinfo"
 )
 Run-Pip "install $($Deps -join ' ')"
 
