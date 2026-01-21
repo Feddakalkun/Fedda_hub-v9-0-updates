@@ -15,18 +15,47 @@ $PauseEachStep = $false
 Write-Host "Installation root: $RootPath"
 
 
-# Always create logs directory at the root (not inside custom_nodes)
+# ============================================================================ 
+# ENHANCED LOGGING SYSTEM
+# ============================================================================ 
 $LogsDir = Join-Path $RootPath "logs"
 if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir | Out-Null }
-$LogFile = Join-Path $LogsDir "install_log.txt"
+
+# Separate log files for different phases
+$Timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+$LogFile = Join-Path $LogsDir "install_log_$Timestamp.txt"
+$ErrorLogFile = Join-Path $LogsDir "install_errors_$Timestamp.txt"
+$SummaryLogFile = Join-Path $LogsDir "install_summary.txt"
+$ProgressFile = Join-Path $LogsDir "install_progress.json"
+
+# Installation state tracking
+$InstallState = @{
+    StartTime      = Get-Date
+    Phase          = "Initialization"
+    CompletedSteps = @()
+    FailedSteps    = @()
+    Warnings       = @()
+    GPUMode        = "unknown"
+}
 
 function Write-Log {
-    param([string]$Message)
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"  # INFO, WARNING, ERROR, SUCCESS
+    )
     $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $LogEntry = "[$Timestamp] $Message"
-    Write-Host $Message
+    $LogEntry = "[$Timestamp] [$Level] $Message"
     
-    # Add mutex to prevent concurrent write errors
+    # Color-coded console output
+    $Color = switch ($Level) {
+        "ERROR" { "Red" }
+        "WARNING" { "Yellow" }
+        "SUCCESS" { "Green" }
+        default { "White" }
+    }
+    Write-Host $LogEntry -ForegroundColor $Color
+    
+    # Write to main log file
     $MaxRetries = 5
     $RetryCount = 0
     while ($RetryCount -lt $MaxRetries) {
@@ -38,11 +67,100 @@ function Write-Log {
             $RetryCount++
             Start-Sleep -Milliseconds 100
             if ($RetryCount -eq $MaxRetries) {
-                # Silently fail after retries to avoid breaking the install
-                Write-Host "[WARNING] Could not write to log file after $MaxRetries attempts"
+                Write-Host "[WARNING] Could not write to log file after $MaxRetries attempts" -ForegroundColor Yellow
             }
         }
     }
+    
+    # Write errors to separate error log
+    if ($Level -eq "ERROR") {
+        try {
+            Add-Content -Path $ErrorLogFile -Value $LogEntry -ErrorAction SilentlyContinue
+            $InstallState.FailedSteps += $Message
+        }
+        catch { }
+    }
+    
+    # Track warnings
+    if ($Level -eq "WARNING") {
+        $InstallState.Warnings += $Message
+    }
+}
+
+function Write-Phase {
+    param([string]$PhaseName)
+    $InstallState.Phase = $PhaseName
+    Write-Log "`n========================================" "INFO"
+    Write-Log "  PHASE: $PhaseName" "INFO"
+    Write-Log "========================================" "INFO"
+    Save-Progress
+}
+
+function Write-Step {
+    param([string]$StepName, [string]$Status = "STARTED")
+    if ($Status -eq "COMPLETED") {
+        Write-Log "✓ $StepName" "SUCCESS"
+        $InstallState.CompletedSteps += $StepName
+    }
+    elseif ($Status -eq "FAILED") {
+        Write-Log "✗ $StepName" "ERROR"
+    }
+    elseif ($Status -eq "SKIPPED") {
+        Write-Log "○ $StepName (skipped)" "INFO"
+    }
+    else {
+        Write-Log "→ $StepName..." "INFO"
+    }
+    Save-Progress
+}
+
+function Save-Progress {
+    try {
+        $ProgressData = @{
+            LastUpdate     = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            Phase          = $InstallState.Phase
+            CompletedSteps = $InstallState.CompletedSteps
+            FailedSteps    = $InstallState.FailedSteps
+            Warnings       = $InstallState.Warnings
+            GPUMode        = $InstallState.GPUMode
+        }
+        $ProgressData | ConvertTo-Json -Depth 10 | Set-Content -Path $ProgressFile -ErrorAction SilentlyContinue
+    }
+    catch {
+        # Silent fail - progress tracking is non-critical
+    }
+}
+
+function Write-Summary {
+    $Duration = ((Get-Date) - $InstallState.StartTime).ToString("hh\:mm\:ss")
+    $SummaryContent = @"
+================================================================================
+FEDDA HUB INSTALLATION SUMMARY
+================================================================================
+Installation Date: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+Duration: $Duration
+GPU Mode: $($InstallState.GPUMode)
+
+COMPLETED STEPS ($($InstallState.CompletedSteps.Count)):
+$($InstallState.CompletedSteps | ForEach-Object { "  ✓ $_" } | Out-String)
+
+FAILED STEPS ($($InstallState.FailedSteps.Count)):
+$($InstallState.FailedSteps | ForEach-Object { "  ✗ $_" } | Out-String)
+
+WARNINGS ($($InstallState.Warnings.Count)):
+$($InstallState.Warnings | ForEach-Object { "  ⚠ $_" } | Out-String)
+
+LOG FILES:
+  Main Log: $LogFile
+  Error Log: $ErrorLogFile
+  
+STATUS: $(if ($InstallState.FailedSteps.Count -eq 0) { "SUCCESS ✓" } else { "COMPLETED WITH ERRORS ⚠" })
+================================================================================
+"@
+    
+    Write-Host "`n$SummaryContent" -ForegroundColor Cyan
+    Set-Content -Path $SummaryLogFile -Value $SummaryContent
+    Write-Log "Installation summary saved to: $SummaryLogFile" "INFO"
 }
 
 function Download-File {
@@ -103,7 +221,7 @@ function Pause-Step {
 # GPU DETECTION for Cross-Platform Compatibility
 # ============================================================================ 
 function Detect-GPUCapability {
-    Write-Log "`n[GPU Detection] Analyzing system hardware..."
+    Write-Log "`n[GPU Detection] Analyzing system hardware..." "INFO"
     
     try {
         # Check for NVIDIA GPU
@@ -111,32 +229,35 @@ function Detect-GPUCapability {
         Where-Object { $_.Name -match "NVIDIA" }
         
         if ($nvidiaGPU) {
-            Write-Log "[GPU Detection] ✓ NVIDIA GPU found: $($nvidiaGPU.Name)" 
+            Write-Log "[GPU Detection] ✓ NVIDIA GPU found: $($nvidiaGPU.Name)" "SUCCESS"
             
             # Try to get CUDA version from nvidia-smi
             try {
                 $nvidiaSmi = & nvidia-smi --query-gpu=driver_version --format=csv, noheader 2>&1
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Log "[GPU Detection] ✓ NVIDIA Driver: $nvidiaSmi"
+                    Write-Log "[GPU Detection] ✓ NVIDIA Driver: $nvidiaSmi" "SUCCESS"
                     $driverVersion = [version]($nvidiaSmi -replace '[^0-9.]', '')
                     
                     # Driver 545+ supports CUDA 12.x
                     if ($driverVersion.Major -ge 545) {
-                        Write-Log "[GPU Detection] ✓ CUDA 12.4 compatible driver detected"
+                        Write-Log "[GPU Detection] ✓ CUDA 12.4 compatible driver detected" "SUCCESS"
+                        $InstallState.GPUMode = "cuda124"
                         return "cuda124"
                     }
                     # Driver 450-544 supports CUDA 11.x
                     elseif ($driverVersion.Major -ge 450) {
-                        Write-Log "[GPU Detection] ⚠ Older driver detected, using CUDA 11.8"
+                        Write-Log "[GPU Detection] ⚠ Older driver detected, using CUDA 11.8" "WARNING"
+                        $InstallState.GPUMode = "cuda118"
                         return "cuda118"
                     }
                 }
             }
             catch {
-                Write-Log "[GPU Detection] ⚠ nvidia-smi not found, assuming CUDA 12.4 support"
+                Write-Log "[GPU Detection] ⚠ nvidia-smi not found, assuming CUDA 12.4 support" "WARNING"
             }
             
             # Default to CUDA 12.4 if NVIDIA GPU detected but can't determine version
+            $InstallState.GPUMode = "cuda124"
             return "cuda124"
         }
         
@@ -145,27 +266,32 @@ function Detect-GPUCapability {
         Where-Object { $_.Name -match "AMD|Radeon" }
         
         if ($amdGPU) {
-            Write-Log "[GPU Detection] ⚠ AMD GPU found: $($amdGPU.Name)"
-            Write-Log "[GPU Detection] DirectML support will be used (CPU fallback for now)"
+            Write-Log "[GPU Detection] ⚠ AMD GPU found: $($amdGPU.Name)" "WARNING"
+            Write-Log "[GPU Detection] DirectML support will be used (CPU fallback for now)" "WARNING"
+            $InstallState.GPUMode = "cpu"
             return "cpu"  # Future: Add DirectML support
         }
         
         # No dedicated GPU found
-        Write-Log "[GPU Detection] ℹ No dedicated GPU detected"
-        Write-Log "[GPU Detection] Installing CPU-only version (slower but compatible)"
+        Write-Log "[GPU Detection] ℹ No dedicated GPU detected" "WARNING"
+        Write-Log "[GPU Detection] Installing CPU-only version (slower but compatible)" "INFO"
+        $InstallState.GPUMode = "cpu"
         return "cpu"
         
     }
     catch {
-        Write-Log "[GPU Detection] ⚠ GPU detection failed: $($_.Exception.Message)"
-        Write-Log "[GPU Detection] Defaulting to CPU-only for maximum compatibility"
+        Write-Log "[GPU Detection] ⚠ GPU detection failed: $($_.Exception.Message)" "ERROR"
+        Write-Log "[GPU Detection] Defaulting to CPU-only for maximum compatibility" "WARNING"
+        $InstallState.GPUMode = "cpu"
         return "cpu"
     }
 }
 
-Write-Log "========================================="
-Write-Log "Portable Installation Started"
-Write-Log "========================================="
+Write-Phase "Bootstrap - Portable Tools Setup"
+Write-Log "Installation root: $RootPath" "INFO"
+Write-Log "=========================================" "INFO"
+Write-Log "Portable Installation Started" "INFO"
+Write-Log "=========================================" "INFO"
 
 # ============================================================================ 
 # 1. BOOTSTRAP PORTABLE TOOLS
@@ -176,7 +302,7 @@ $PyDir = Join-Path $RootPath "python_embeded"
 $PyExe = Join-Path $PyDir "python.exe"
 
 if (-not (Test-Path $PyExe)) {
-    Write-Log "[ComfyUI 1/9] Setting up Portable Python..."
+    Write-Step "Setting up Portable Python 3.11.9" "STARTED"
     $PyZip = Join-Path $RootPath "python_embed.zip"
     Download-File "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip" $PyZip
     
@@ -196,17 +322,18 @@ if (-not (Test-Path $PyExe)) {
     }
     
     Set-Content -Path $PthFile -Value $Content
-    Write-Log "Portable Python configured (Path fixed)."
+    Write-Log "Portable Python configured (Path fixed)." "SUCCESS"
 
     # Install Pip
-    Write-Log "Installing Pip..."
+    Write-Log "Installing Pip..." "INFO"
     $GetPip = Join-Path $RootPath "get-pip.py"
     Download-File "https://bootstrap.pypa.io/get-pip.py" $GetPip
     Start-Process -FilePath $PyExe -ArgumentList "$GetPip" -NoNewWindow -Wait
     Remove-Item $GetPip -Force
+    Write-Step "Setting up Portable Python 3.11.9" "COMPLETED"
 }
 else {
-    Write-Log "[ComfyUI 1/9] Portable Python found."
+    Write-Step "Setting up Portable Python 3.11.9" "SKIPPED"
 }
 
 Pause-Step
@@ -258,17 +385,140 @@ Pause-Step
 $env:PATH = "$GitDir\cmd;$NodeDir;$PyDir;$PyDir\Scripts;$env:PATH"
 
 function Run-Pip {
-    param([string]$Arguments)
-    $Process = Start-Process -FilePath $PyExe -ArgumentList "-m pip $Arguments" -NoNewWindow -Wait -PassThru
-    if ($Process.ExitCode -ne 0) {
-        Write-Log "WARNING: Pip command failed: $Arguments"
+    param(
+        [string]$Arguments,
+        [string]$StepName = "",
+        [bool]$Critical = $false
+    )
+    
+    if ($StepName) {
+        Write-Step $StepName "STARTED"
     }
+    
+    $PipLogFile = Join-Path $LogsDir "pip_$(Get-Date -Format 'HHmmss').log"
+    Write-Log "Running: pip $Arguments" "INFO"
+    
+    $ProcessInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $ProcessInfo.FileName = $PyExe
+    $ProcessInfo.Arguments = "-m pip $Arguments"
+    $ProcessInfo.UseShellExecute = $false
+    $ProcessInfo.RedirectStandardOutput = $true
+    $ProcessInfo.RedirectStandardError = $true
+    $ProcessInfo.CreateNoWindow = $true
+    
+    $Process = New-Object System.Diagnostics.Process
+    $Process.StartInfo = $ProcessInfo
+    
+    $stdout = New-Object System.Text.StringBuilder
+    $stderr = New-Object System.Text.StringBuilder
+    
+    $Process.add_OutputDataReceived({
+            if ($EventArgs.Data) {
+                $stdout.AppendLine($EventArgs.Data) | Out-Null
+                Write-Host $EventArgs.Data -ForegroundColor Gray
+            }
+        })
+    
+    $Process.add_ErrorDataReceived({
+            if ($EventArgs.Data) {
+                $stderr.AppendLine($EventArgs.Data) | Out-Null
+                Write-Host $EventArgs.Data -ForegroundColor DarkYellow
+            }
+        })
+    
+    $Process.Start() | Out-Null
+    $Process.BeginOutputReadLine()
+    $Process.BeginErrorReadLine()
+    $Process.WaitForExit()
+    
+    $ExitCode = $Process.ExitCode
+    
+    # Save pip output to log
+    $FullOutput = "STDOUT:`n$($stdout.ToString())`n`nSTDERR:`n$($stderr.ToString())"
+    Set-Content -Path $PipLogFile -Value $FullOutput
+    
+    if ($ExitCode -ne 0) {
+        $ErrorMsg = "Pip command failed (Exit Code: $ExitCode): $Arguments"
+        Write-Log $ErrorMsg "ERROR"
+        Write-Log "Full output saved to: $PipLogFile" "ERROR"
+        
+        if ($StepName) {
+            Write-Step $StepName "FAILED"
+        }
+        
+        if ($Critical) {
+            Write-Log "CRITICAL FAILURE - Installation cannot continue" "ERROR"
+            throw $ErrorMsg
+        }
+    }
+    else {
+        if ($StepName) {
+            Write-Step $StepName "COMPLETED"
+        }
+    }
+    
+    return $ExitCode
 }
 
 function Run-Git {
-    param([string]$Arguments)
-    $Process = Start-Process -FilePath $GitExe -ArgumentList "$Arguments" -NoNewWindow -Wait -PassThru
-    return $Process.ExitCode
+    param(
+        [string]$Arguments,
+        [string]$StepName = ""
+    )
+    
+    if ($StepName) {
+        Write-Step $StepName "STARTED"
+    }
+    
+    Write-Log "Running: git $Arguments" "INFO"
+    
+    $ProcessInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $ProcessInfo.FileName = $GitExe
+    $ProcessInfo.Arguments = $Arguments
+    $ProcessInfo.UseShellExecute = $false
+    $ProcessInfo.RedirectStandardOutput = $true
+    $ProcessInfo.RedirectStandardError = $true
+    $ProcessInfo.CreateNoWindow = $true
+    
+    $Process = New-Object System.Diagnostics.Process
+    $Process.StartInfo = $ProcessInfo
+    
+    $stdout = New-Object System.Text.StringBuilder
+    $stderr = New-Object System.Text.StringBuilder
+    
+    $Process.add_OutputDataReceived({
+            if ($EventArgs.Data) {
+                $stdout.AppendLine($EventArgs.Data) | Out-Null
+                Write-Host $EventArgs.Data -ForegroundColor Gray
+            }
+        })
+    
+    $Process.add_ErrorDataReceived({
+            if ($EventArgs.Data) {
+                $stderr.AppendLine($EventArgs.Data) | Out-Null
+            }
+        })
+    
+    $Process.Start() | Out-Null
+    $Process.BeginOutputReadLine()
+    $Process.BeginErrorReadLine()
+    $Process.WaitForExit()
+    
+    $ExitCode = $Process.ExitCode
+    
+    if ($ExitCode -ne 0) {
+        Write-Log "Git command failed (Exit Code: $ExitCode): $Arguments" "WARNING"
+        if ($StepName) {
+            Write-Step $StepName "FAILED"
+        }
+    }
+    else {
+        if ($StepName) {
+            Write-Step $StepName "COMPLETED"
+        }
+    }
+    
+    return $ExitCode
 }
 
 # ============================================================================ 
@@ -382,58 +632,72 @@ else {
 Pause-Step
 
 # 5. Core Dependencies
-Write-Log "`n[ComfyUI 5/9] Installing core dependencies..."
+Write-Phase "Core Dependencies - PyTorch & GPU Acceleration"
 $ComfyDir = Join-Path $RootPath "ComfyUI"
 
-Write-Log "Upgrading pip..."
-Run-Pip "install --upgrade pip wheel setuptools"
+Run-Pip "install --upgrade pip wheel setuptools" "Upgrading pip, wheel, and setuptools" $true
 
 # Detect GPU and install appropriate PyTorch version
 $gpuMode = Detect-GPUCapability
 
 if ($gpuMode -eq "cuda124") {
-    Write-Log "Installing PyTorch 2.5.1 (CUDA 12.4 - GPU Accelerated)..."
-    Write-Log "This will provide maximum performance on your NVIDIA GPU"
-    Run-Pip "install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124"
+    Write-Log "Installing PyTorch 2.5.1 (CUDA 12.4 - GPU Accelerated)" "INFO"
+    Write-Log "This will provide maximum performance on your NVIDIA GPU" "INFO"
+    Run-Pip "install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124" "PyTorch 2.5.1 + CUDA 12.4" $true
     
-    Write-Log "Installing Xformers 0.0.28.post3 (GPU acceleration)..."
-    Run-Pip "install xformers==0.0.28.post3 --index-url https://download.pytorch.org/whl/cu124"
+    Write-Log "Installing Xformers 0.0.28.post3 (GPU acceleration)" "INFO"
+    $xformersResult = Run-Pip "install xformers==0.0.28.post3 --index-url https://download.pytorch.org/whl/cu124" "Xformers 0.0.28.post3"
+    if ($xformersResult -ne 0) {
+        Write-Log "⚠ Xformers installation failed - ComfyUI will still work but slower" "WARNING"
+    }
     
-    Write-Log "Installing Windows-compatible Triton (for SageAttention)..."
-    Run-Pip "install https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post5/triton-3.1.0-cp311-cp311-win_amd64.whl"
-    Write-Log "Installing SageAttention..."
-    Run-Pip "install sageattention==1.0.6"
+    Write-Log "Installing Windows-compatible Triton (for SageAttention)" "INFO"
+    $tritonResult = Run-Pip "install https://github.com/woct0rdho/triton-windows/releases/download/v3.1.0-windows.post5/triton-3.1.0-cp311-cp311-win_amd64.whl" "Triton for Windows"
+    
+    if ($tritonResult -eq 0) {
+        Write-Log "Installing SageAttention 1.0.6" "INFO"
+        $sageResult = Run-Pip "install sageattention==1.0.6" "SageAttention 1.0.6"
+        if ($sageResult -ne 0) {
+            Write-Log "⚠ SageAttention installation failed - Optional feature, not critical" "WARNING"
+        }
+    }
+    else {
+        Write-Log "⚠ Triton failed - Skipping SageAttention (requires Triton)" "WARNING"
+    }
 }
 elseif ($gpuMode -eq "cuda118") {
-    Write-Log "Installing PyTorch 2.5.1 (CUDA 11.8 - Compatible with older drivers)..."
-    Run-Pip "install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118"
+    Write-Log "Installing PyTorch 2.5.1 (CUDA 11.8 - Compatible with older drivers)" "INFO"
+    Run-Pip "install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118" "PyTorch 2.5.1 + CUDA 11.8" $true
     
-    Write-Log "Installing Xformers 0.0.28.post3 (CUDA 11.8)..."
-    Run-Pip "install xformers==0.0.28.post3 --index-url https://download.pytorch.org/whl/cu118"
+    Write-Log "Installing Xformers 0.0.28.post3 (CUDA 11.8)" "INFO"
+    $xformersResult = Run-Pip "install xformers==0.0.28.post3 --index-url https://download.pytorch.org/whl/cu118" "Xformers 0.0.28.post3"
+    if ($xformersResult -ne 0) {
+        Write-Log "⚠ Xformers installation failed - ComfyUI will still work but slower" "WARNING"
+    }
     
-    Write-Log "Skipping Triton and SageAttention (requires CUDA 12.x)"
+    Write-Log "Skipping Triton and SageAttention (requires CUDA 12.x)" "WARNING"
 }
 else {
-    Write-Log "Installing PyTorch 2.5.1 (CPU-Only)..."
-    Write-Log "NOTE: This will be slower than GPU acceleration but works on any PC"
-    Run-Pip "install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu"
+    Write-Log "Installing PyTorch 2.5.1 (CPU-Only)" "WARNING"
+    Write-Log "NOTE: This will be slower than GPU acceleration but works on any PC" "INFO"
+    Run-Pip "install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu" "PyTorch 2.5.1 (CPU)" $true
     
-    Write-Log "Skipping Xformers (GPU-only package)"
-    Write-Log "Skipping Triton and SageAttention (GPU-only packages)"
+    Write-Log "Skipping Xformers (GPU-only package)" "INFO"
+    Write-Log "Skipping Triton and SageAttention (GPU-only packages)" "INFO"
 }
 
-Write-Log "Installing ComfyUI requirements..."
+Write-Log "Installing ComfyUI requirements..." "INFO"
 $ReqFile = Join-Path $ComfyDir "requirements.txt"
-Run-Pip "install -r $ReqFile"
+Run-Pip "install -r $ReqFile" "ComfyUI requirements"
 
-Write-Log "Installing core dependencies..."
-Run-Pip "install numpy scipy matplotlib pillow tqdm requests psutil"
+Write-Log "Installing core dependencies..." "INFO"
+Run-Pip "install numpy scipy matplotlib pillow tqdm requests psutil" "Core Python packages"
 
 Pause-Step
 
 
 # 6. Custom Nodes Installation
-Write-Log "`n[ComfyUI 6/9] Installing Custom Nodes..."
+Write-Phase "Custom Nodes Installation"
 $InstallerDir = Join-Path $RootPath "installer"
 $NodesConfig = Get-Content (Join-Path $InstallerDir "config\nodes.json") | ConvertFrom-Json
 $CustomNodesDir = Join-Path $ComfyDir "custom_nodes"
@@ -765,13 +1029,18 @@ else {
 Pause-Step
 
 # 11. Final Cleanup
-Write-Log "Skipping desktop shortcut creation (use run.bat)."
+Write-Phase "Finalization"
+Write-Step "Creating shortcuts and cleanup" "SKIPPED"
+Write-Log "Desktop shortcuts skipped (use run.bat to launch)" "INFO"
 Pause-Step
 
-Write-Log "`n================================================"
-Write-Log " ComfyUI Setup Complete!"
-Write-Log " Returning to main installer..."
-Write-Log "================================================"
+Write-Phase "Installation Complete"
+Write-Log "`n================================================" "SUCCESS"
+Write-Log " FEDDA HUB SETUP COMPLETE!" "SUCCESS"
+Write-Log "================================================" "SUCCESS"
+
+# Generate and display summary
+Write-Summary
 
 # Keep window open for user review
 Write-Host "`nPress any key to continue..." -ForegroundColor Yellow

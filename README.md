@@ -129,6 +129,22 @@ The portable installer includes:
 
 See `installer/README.md` for details.
 
+### 🔧 Installation Troubleshooting
+
+The installer creates **detailed logs** in the `logs/` folder:
+- `install_summary.txt` - Quick overview of what succeeded/failed
+- `install_log_[timestamp].txt` - Full installation log
+- `install_errors_[timestamp].txt` - Errors only
+
+**Having issues?** See the comprehensive guide:
+👉 **[installer/INSTALLATION_LOGS_GUIDE.md](installer/INSTALLATION_LOGS_GUIDE.md)**
+
+Common issues covered:
+- GPU detection problems
+- Xformers/SageAttention installation failures
+- Package conflicts
+- Custom node errors
+
 ---
 
 ## 🤝 Contributing
