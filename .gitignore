@@ -1,23 +1,122 @@
-# Fedda Hub Repository - Root .gitignore
-# Only source code and installer scripts should be committed
+# ============================================================================
+# FEDDA HUB - .gitignore
+# ============================================================================
+# Only track source code, not installed dependencies or generated files
+# ============================================================================
 
-# Installed/generated components (DO NOT COMMIT)
-ComfyUI/
-VoxCPM/
-ollama_embeded/
+# ===== PORTABLE TOOLS (Installed by installer) =====
 python_embeded/
 git_embeded/
 node_embeded/
-logs/
+ollama_embeded/
+VoxCPM/
 
-# IDE and OS files
-.vscode/
-.idea/
+# ===== COMFYUI (Cloned by installer) =====
+ComfyUI/
+
+# ===== INSTALLATION LOGS =====
+logs/
+*.log
+
+# ===== NEXT.JS / NODE =====
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# ===== DATABASE =====
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/migrations/
+
+# ===== ENVIRONMENT FILES =====
+.env
+.env.local
+.env.production
+.env.development
+
+# ===== PYTHON =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+ENV/
+
+# ===== TEMPORARY FILES =====
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
 .DS_Store
 Thumbs.db
-*.swp
-*.swo
+desktop.ini
 
-# Temp files
-*.tmp
-*.log
+# ===== DOWNLOADS (Installer downloads) =====
+*.zip
+*.tar.gz
+*.tgz
+get-pip.py
+
+# ===== IDE / EDITOR =====
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosslcache
+*.sln.docstates
+
+# ===== WINDOWS =====
+$RECYCLE.BIN/
+*.lnk
+
+# ===== BUILD ARTIFACTS =====
+*.exe
+*.dll
+*.pdb
+*.obj
+
+# ===== MODEL FILES (Too large for GitHub) =====
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# ===== GENERATED IMAGES/VIDEOS =====
+output/
+temp/
+ComfyUI/output/
+ComfyUI/input/
+
+# ============================================================================
+# WHITELIST - Files to ALWAYS include (override above rules)
+# ============================================================================
+# Keep example/template files
+!.env.example
+
+# Keep installer scripts
+!installer/**/*.bat
+!installer/**/*.ps1
+!installer/**/*.json
+!installer/**/*.csv
+!installer/**/*.md
+
+# Keep source code
+!src/**/*
+!prisma/schema.prisma
+!public/**/*
+!*.ts
+!*.tsx
+!*.js
+!*.jsx
+!*.json
+!*.md
