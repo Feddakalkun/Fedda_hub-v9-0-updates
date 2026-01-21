@@ -396,11 +396,12 @@ function Run-Pip {
     }
     
     $Timestamp = Get-Date -Format 'HHmmss_fff'
-    $PipLogFile = Join-Path $LogsDir "pip_$Timestamp.log"
+    $PipOutFile = Join-Path $LogsDir "pip_${Timestamp}_out.log"
+    $PipErrFile = Join-Path $LogsDir "pip_${Timestamp}_err.log"
     Write-Log "Running: pip $Arguments" "INFO"
     
     try {
-        $Process = Start-Process -FilePath $PyExe -ArgumentList "-m pip $Arguments" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $PipLogFile -RedirectStandardError $PipLogFile
+        $Process = Start-Process -FilePath $PyExe -ArgumentList "-m pip $Arguments" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $PipOutFile -RedirectStandardError $PipErrFile
         $ExitCode = $Process.ExitCode
     }
     catch {
@@ -409,9 +410,29 @@ function Run-Pip {
         return 1
     }
     
-    # Output content to console for visibility
-    if (Test-Path $PipLogFile) {
-        Get-Content $PipLogFile | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
+    # Output content to console for visibility and save to logical log
+    $FullOutput = ""
+    if (Test-Path $PipOutFile) {
+        $OutContent = Get-Content $PipOutFile -Raw
+        if ($OutContent) {
+            Write-Host $OutContent -ForegroundColor Gray
+            $FullOutput += "STDOUT:`n$OutContent`n"
+        }
+        Remove-Item $PipOutFile -Force -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $PipErrFile) {
+        $ErrContent = Get-Content $PipErrFile -Raw
+        if ($ErrContent) {
+            Write-Host $ErrContent -ForegroundColor DarkYellow
+            $FullOutput += "STDERR:`n$ErrContent`n"
+        }
+        Remove-Item $PipErrFile -Force -ErrorAction SilentlyContinue
+    }
+    
+    # Save combined output to a single pip log for this run
+    $PipLogFile = Join-Path $LogsDir "pip_$Timestamp.log"
+    if ($FullOutput) {
+        Set-Content -Path $PipLogFile -Value $FullOutput
     }
     
     if ($ExitCode -ne 0) {
@@ -448,11 +469,12 @@ function Run-Git {
     }
     
     $Timestamp = Get-Date -Format 'HHmmss_fff'
-    $GitLogFile = Join-Path $LogsDir "git_$Timestamp.log"
+    $GitOutFile = Join-Path $LogsDir "git_${Timestamp}_out.log"
+    $GitErrFile = Join-Path $LogsDir "git_${Timestamp}_err.log"
     Write-Log "Running: git $Arguments" "INFO"
     
     try {
-        $Process = Start-Process -FilePath $GitExe -ArgumentList "$Arguments" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $GitLogFile -RedirectStandardError $GitLogFile
+        $Process = Start-Process -FilePath $GitExe -ArgumentList "$Arguments" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $GitOutFile -RedirectStandardError $GitErrFile
         $ExitCode = $Process.ExitCode
     }
     catch {
@@ -461,17 +483,34 @@ function Run-Git {
     }
     
     # Output content to console
-    if (Test-Path $GitLogFile) {
-        Get-Content $GitLogFile | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
-        # Cleanup log for git unless failed
-        if ($ExitCode -eq 0) { Remove-Item $GitLogFile -Force -ErrorAction SilentlyContinue }
+    $FullOutput = ""
+    if (Test-Path $GitOutFile) {
+        $OutContent = Get-Content $GitOutFile -Raw
+        if ($OutContent) {
+            Write-Host $OutContent -ForegroundColor Gray
+            $FullOutput += "STDOUT:`n$OutContent`n"
+        }
+        Remove-Item $GitOutFile -Force -ErrorAction SilentlyContinue
     }
-    
+    if (Test-Path $GitErrFile) {
+        $ErrContent = Get-Content $GitErrFile -Raw
+        if ($ErrContent) {
+            Write-Host $ErrContent -ForegroundColor DarkYellow
+            $FullOutput += "STDERR:`n$ErrContent`n"
+        }
+        Remove-Item $GitErrFile -Force -ErrorAction SilentlyContinue
+    }
+
     if ($ExitCode -ne 0) {
         Write-Log "Git command failed (Exit Code: $ExitCode): $Arguments" "WARNING"
-        if (Test-Path $GitLogFile) {
+        
+        # Save output for failed git commands
+        $GitLogFile = Join-Path $LogsDir "git_$Timestamp.log"
+        if ($FullOutput) {
+            Set-Content -Path $GitLogFile -Value $FullOutput
             Write-Log "Git output saved to: $GitLogFile" "INFO"
         }
+
         if ($StepName) {
             Write-Step $StepName "FAILED"
         }
