@@ -164,7 +164,7 @@
   "238": {
     "inputs": {
       "scheduler": "simple",
-      "steps": 25,
+      "steps": 15,
       "denoise": 1,
       "model": [
         "268",
@@ -200,8 +200,8 @@
   },
   "241": {
     "inputs": {
-      "width": 1024,
-      "height": 1024,
+      "width": 768,
+      "height": 768,
       "upscale_method": "lanczos",
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",
