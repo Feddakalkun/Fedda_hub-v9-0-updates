@@ -1,7 +1,7 @@
 {
   "153": {
     "inputs": {
-      "cfg": 1,
+      "cfg": 1.5,
       "model": [
         "268",
         0
@@ -164,7 +164,7 @@
   "238": {
     "inputs": {
       "scheduler": "simple",
-      "steps": 14,
+      "steps": 25,
       "denoise": 1,
       "model": [
         "268",
