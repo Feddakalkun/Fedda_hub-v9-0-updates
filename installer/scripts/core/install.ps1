@@ -612,21 +612,24 @@ function Install-VoxCPM {
 # ============================================================================ 
 
 # 4. Setup ComfyUI Repository
-Write-Log "`n[ComfyUI 4/9] Setting up ComfyUI repository..."
+Write-Phase "ComfyUI Repository Setup"
 $ComfyDir = Join-Path $RootPath "ComfyUI"
 if (-not (Test-Path $ComfyDir)) {
-    Write-Log "Cloning ComfyUI repository (official)..."
-    try {
-        Run-Git "clone --depth 1 https://github.com/comfyanonymous/ComfyUI.git `"$ComfyDir`""
-        Write-Log "ComfyUI cloned successfully."
+    $gitResult = Run-Git "clone --depth 1 https://github.com/comfyanonymous/ComfyUI.git `"$ComfyDir`"" "Cloning ComfyUI repository"
+    if ($gitResult -eq 0) {
+        Write-Log "ComfyUI cloned successfully." "SUCCESS"
     }
-    catch {
-        Write-Log "ERROR: Failed to clone ComfyUI repository."
+    else {
+        Write-Log "ERROR: Failed to clone ComfyUI repository." "ERROR"
+        Write-Log "Check your internet connection and try again." "ERROR"
+        Write-Summary
+        Read-Host "Press Enter to exit"
         exit 1
     }
 }
 else {
-    Write-Log "ComfyUI directory already exists."
+    Write-Step "Cloning ComfyUI repository" "SKIPPED"
+    Write-Log "ComfyUI directory already exists - using existing installation" "INFO"
 }
 
 Pause-Step
@@ -635,7 +638,12 @@ Pause-Step
 Write-Phase "Core Dependencies - PyTorch & GPU Acceleration"
 $ComfyDir = Join-Path $RootPath "ComfyUI"
 
-Run-Pip "install --upgrade pip wheel setuptools" "Upgrading pip, wheel, and setuptools" $true
+
+$pipUpgradeResult = Run-Pip "install --upgrade pip wheel setuptools" "Upgrading pip, wheel, and setuptools"
+if ($pipUpgradeResult -ne 0) {
+    Write-Log "Pip upgrade failed - continuing with existing version" "WARNING"
+}
+
 
 # Detect GPU and install appropriate PyTorch version
 $gpuMode = Detect-GPUCapability
