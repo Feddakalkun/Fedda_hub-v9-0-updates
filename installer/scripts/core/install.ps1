@@ -884,6 +884,17 @@ else {
     Write-Log "styles.csv not found, skipping."
 }
 
+# Install sample workflows to ComfyUI/user/default/workflows
+$WorkflowsSrc = Join-Path $InstallerDir "assets\workflows"
+$WorkflowsDst = Join-Path $ComfyDir "user\default\workflows"
+
+if (Test-Path $WorkflowsSrc) {
+    if (-not (Test-Path $WorkflowsDst)) {
+        New-Item -ItemType Directory -Path $WorkflowsDst -Force | Out-Null
+    }
+    Copy-Item -Path "$WorkflowsSrc\*.json" -Destination $WorkflowsDst -Force
+    Write-Log "Installed sample workflows to: $WorkflowsDst"
+}
 
 Pause-Step
 
@@ -954,46 +965,20 @@ Pause-Step
 
 # 9. Configure ComfyUI-Manager Security (Weak Mode)
 Write-Log "`n[ComfyUI 9/9] Configuring ComfyUI-Manager Security..."
-$ManagerConfigDir = Join-Path $ComfyDir "user\default\ComfyUI-Manager"
+$ManagerConfigDir = Join-Path $ComfyDir "user\__manager"
 $ManagerConfigFile = Join-Path $ManagerConfigDir "config.ini"
+$ConfigSrc = Join-Path $InstallerDir "assets\config.ini"
 
 if (-not (Test-Path $ManagerConfigDir)) {
     New-Item -ItemType Directory -Path $ManagerConfigDir -Force | Out-Null
 }
 
-if (-not (Test-Path $ManagerConfigFile)) {
-    $ConfigContent = @"
-[default]
-preview_method = latent2rgb
-git_exe =
-use_uv = False
-channel_url = https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/node_db/dev
-share_option = all
-bypass_ssl = False
-file_logging = True
-component_policy = mine
-update_policy = stable-comfyui
-windows_selector_event_loop_policy = False
-model_download_by_agent = False
-downgrade_blacklist =
-security_level = weak
-always_lazy_install = False
-network_mode = public
-db_mode = cache
-host = 0.0.0.0
-port = 8188
-allow_remote = true
-auto_update = false
-auto_start = false
-username =
-password =
-token =
-"@
-    Set-Content -Path $ManagerConfigFile -Value $ConfigContent
-    Write-Log "Security level set to 'weak' (Developer Mode)."
+if (Test-Path $ConfigSrc) {
+    Copy-Item -Path $ConfigSrc -Destination $ManagerConfigFile -Force
+    Write-Log "Applied custom ComfyUI-Manager config (security_level = weak)."
 }
 else {
-    Write-Log "ComfyUI-Manager config already exists. Skipping."
+    Write-Log "Custom config.ini not found in assets, skipping."
 }
 
 Pause-Step

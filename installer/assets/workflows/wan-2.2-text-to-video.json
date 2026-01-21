@@ -37,7 +37,7 @@
         0
       ],
       "cfg": 1,
-      "sampler_name": "lcm",
+      "sampler_name": "euler",
       "scheduler": "simple",
       "start_at_step": [
         "221",
@@ -76,7 +76,7 @@
         0
       ],
       "cfg": 1,
-      "sampler_name": "lcm",
+      "sampler_name": "euler",
       "scheduler": "simple",
       "start_at_step": 0,
       "end_at_step": [
@@ -466,8 +466,8 @@
   },
   "256": {
     "inputs": {
-      "Xi": 6,
-      "Xf": 6,
+      "Xi": 25,
+      "Xf": 25,
       "isfloatX": 0
     },
     "class_type": "mxSlider",

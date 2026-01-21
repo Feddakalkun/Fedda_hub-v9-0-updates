@@ -83,7 +83,7 @@
         0
       ],
       "cfg": 1,
-      "sampler_name": "lcm",
+      "sampler_name": "euler",
       "scheduler": "simple",
       "start_at_step": [
         "221",
@@ -122,7 +122,7 @@
         0
       ],
       "cfg": 1,
-      "sampler_name": "lcm",
+      "sampler_name": "euler",
       "scheduler": "simple",
       "start_at_step": 0,
       "end_at_step": [
