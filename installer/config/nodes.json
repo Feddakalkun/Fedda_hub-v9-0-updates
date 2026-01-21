@@ -15,11 +15,6 @@
     "folder": "ComfyUI-Impact-Pack"
   },
   {
-    "name": "ComfyUI-Custom-Nodes (Zuellni)",
-    "url": "https://github.com/Zuellni/ComfyUI-Custom-Nodes.git",
-    "folder": "ComfyUI-Custom-Nodes"
-  },
-  {
     "name": "WAS Node Suite",
     "url": "https://github.com/WASasquatch/was-node-suite-comfyui.git",
     "folder": "was-node-suite-comfyui"
@@ -28,11 +23,6 @@
     "name": "ComfyUI-Workspace-Manager",
     "url": "https://github.com/11cafe/comfyui-workspace-manager.git",
     "folder": "ComfyUI-Workspace-Manager"
-  },
-  {
-    "name": "ComfyUI-AutoConnect",
-    "url": "https://github.com/palant/autoconnect-comfyui.git",
-    "folder": "ComfyUI-AutoConnect"
   },
   {
     "name": "ComfyUI-Auto-Nodes-Layout",
